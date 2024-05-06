@@ -1,0 +1,23 @@
+namespace: ccardenosa
+name: kcli-wrapper
+version: 1.0.0
+
+readme: README.md
+
+authors:
+- https://github.com/ccardenosa
+
+description: Provides access to kcli - the ultimate virtualisation wrapper
+
+license:
+- Apache-2.0
+
+tags: [ kcli, modules]
+
+dependencies: {}
+
+repository: https://github.com/ccardenosa/ansible-kcli-wrapper
+documentation: https://github.com/ccardenosa/ansible-kcli-wrapper#readme
+issues: https://github.com/ccardenosa/ansible-kcli-wrapper/issues
+
+build_ignore: []
