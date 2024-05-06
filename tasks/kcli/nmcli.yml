@@ -1,0 +1,66 @@
+---
+- name: Deleting nmcli bridge
+  become: true
+  when: network.bridge is defined and network.bridge and
+        network.bridgename is defined and
+        network.nic is defined and
+        ('rollback' in ansible_run_tags)
+  block:
+
+    - name: Reactivate network interface connection
+      ansible.builtin.shell: |-
+        for NIC_UUID in $(nmcli -f device,uuid connection | grep '^-- '|awk '{print $2}'); do \
+          nmcli -g connection.interface-name connection show uuid ${NIC_UUID} | grep {{ network.nic }}
+          if [ $? -eq 0 ]; then
+            nmcli connection up uuid ${NIC_UUID}
+            exit 0
+          fi
+        done
+
+    - name: Deleting bridges
+      community.general.nmcli:
+        conn_name: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ network.bridgename }}"
+        - "{{ network.name }}"
+
+- name: Setup nmcli bridges
+  become: true
+  when: network.bridge is defined and network.bridge and
+        network.bridgename is defined and
+        network.nic is defined and
+        ('rollback' not in ansible_run_tags)
+  block:
+
+    - name: Create bridge
+      community.general.nmcli:
+        type: bridge
+        autoconnect: yes
+        conn_name: "{{ network.bridgename }}"
+        ifname: "{{ network.name }}"
+        stp: false
+        # method4: disabled
+        # method6: disabled
+        state: present
+
+    - name: Create bridge-slave
+      community.general.nmcli:
+        type: ethernet
+        slave_type: bridge
+        autoconnect: yes
+        conn_name: "{{ network.name }}"
+        ifname: "{{ network.nic }}"
+        master: "{{ network.name }}"
+        state: present
+
+    - name: Deactivate network interface connection
+      ansible.builtin.shell: |-
+        NIC_UUID=$(nmcli -f device,uuid connection | grep '{{ network.nic }}' | awk '{print $2}')
+        nmcli connection down uuid ${NIC_UUID}
+        nmcli connection up {{ network.name }}
+
+    - name: Check connections
+      ansible.builtin.shell: |-
+        nmcli con show
+        ip -br a
